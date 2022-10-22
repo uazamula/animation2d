@@ -1,6 +1,10 @@
+import 'dart:math';
+
 import 'package:animation2d/ball.dart';
 import 'package:animation2d/bat.dart';
 import 'package:flutter/material.dart';
+
+enum Direction { up, down, left, right }
 
 class Pong extends StatefulWidget {
   const Pong({Key? key}) : super(key: key);
@@ -9,17 +13,27 @@ class Pong extends StatefulWidget {
   _PongState createState() => _PongState();
 }
 
-class _PongState extends State<Pong> with SingleTickerProviderStateMixin{
+class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
+  double increment = 5;
+
+  Direction vDir = Direction.down;
+  Direction hDir = Direction.right;
+
   Animation<double>? animation;
   AnimationController? controller;
 
-  double? width;
-  double? height;
+  double? width = 0;
+  double? height = 0;
   double posX = 0;
   double posY = 0;
   double batWidth = 0;
   double batHeight = 0;
   double batPosition = 0;
+
+  double randX = 1;
+  double randY = 1;
+
+  // int score=
 
   @override
   void initState() {
@@ -27,14 +41,63 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin{
     posY = 0;
     controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 3),
+      duration: Duration(seconds: 30),
     );
     animation = Tween<double>(begin: 0, end: 100).animate(controller!);
-    animation!.addListener(() {setState(() {
-      posX++;
-      posY++;
-    });});
+    animation!.addListener(() {
+      safeSetState(() {
+        (hDir == Direction.right)
+            ? posX += (increment * randX).round()
+            : posX -= (increment * randX).round();
+        (vDir == Direction.down)
+            ? posY += (increment * randY).round()
+            : posY -= (increment * randY).round();
+      });
+      checkBorders();
+    });
+    controller!.forward();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    controller!.dispose();
+    super.dispose();
+  }
+
+  void checkBorders() {
+    double diameter = 50;
+    if (posX <= 0 && hDir == Direction.left) {
+      hDir = Direction.right;
+      randX = randomNumber();
+    }
+    if (posX >= width! - diameter && hDir == Direction.right) {
+      hDir = Direction.left;
+      randX = randomNumber();
+    }
+    if (posY >= height! - diameter - batHeight && vDir == Direction.down) {
+      // check if the bat is here, otherwise loose
+      if (posX >= (batPosition - diameter) &&
+          posX <= (batPosition + batWidth + diameter)) {
+        vDir = Direction.up;
+        randY = randomNumber();
+      } else {
+        controller!.stop();
+        dispose();
+      }
+    }
+    if (posY <= 0 && vDir == Direction.up) {
+      vDir = Direction.down;
+      randY = randomNumber();
+    }
+  }
+
+  void safeSetState(Function() function) {
+    if (mounted && controller!.isAnimating) {
+      setState(() {
+        function();
+      });
+    }
   }
 
   @override
@@ -46,13 +109,34 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin{
       batHeight = height! / 20;
       return Stack(
         children: [
-          Positioned(child: Ball(), top: 0),
           Positioned(
-            child: Bat(batWidth, batHeight),
+            top: posY,
+            left: posX,
+            child: Ball(),
+          ),
+          Positioned(
             bottom: 0,
+            left: batPosition,
+            child: GestureDetector(
+                onHorizontalDragUpdate: (DragUpdateDetails update) =>
+                    moveBat(update),
+                child: Bat(batWidth, batHeight)),
           ),
         ],
       );
+    });
+  }
+
+  double randomNumber() {
+    // 0.5..1.5
+    var ran = Random();
+    int myNum = ran.nextInt(101);
+    return (50 + myNum) / 100;
+  }
+
+  void moveBat(DragUpdateDetails update) {
+    safeSetState(() {
+      batPosition += update.delta.dx;
     });
   }
 }
