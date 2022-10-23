@@ -88,7 +88,7 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
         safeSetState(() => score++);
       } else {
         controller!.stop();
-        dispose();
+        showMessage(context);
       }
     }
     if (posY <= 0 && vDir == Direction.up) {
@@ -149,5 +149,36 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
     safeSetState(() {
       batPosition += update.delta.dx;
     });
+  }
+
+  void showMessage(BuildContext context) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Game Over'),
+            content: Text('Would you like to play again?'),
+            actions: [
+              ElevatedButton(
+                onPressed: (){
+                  setState(() {
+                    posX = 0;
+                    posY = 0;
+                  });
+                  Navigator.of(context).pop();
+                  controller!.repeat();
+                },
+                child: Text('Yes'),
+              ),
+              ElevatedButton(
+                child: Text('No'),
+                onPressed: (){
+                  Navigator.of(context).pop();
+                  dispose();
+                },
+              )
+            ],
+          );
+        });
   }
 }
