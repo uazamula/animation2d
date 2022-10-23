@@ -33,12 +33,13 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
   double randX = 1;
   double randY = 1;
 
-  // int score=
+  int score = 0;
+  bool isBuilt = false;
 
   @override
   void initState() {
     posX = 0;
-    posY = 0;
+    posY = 50;
     controller = AnimationController(
       vsync: this,
       duration: Duration(seconds: 30),
@@ -53,7 +54,9 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
             ? posY += (increment * randY).round()
             : posY -= (increment * randY).round();
       });
-      checkBorders();
+      if (isBuilt) {
+        checkBorders();
+      }
     });
     controller!.forward();
     super.initState();
@@ -75,12 +78,14 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
       hDir = Direction.left;
       randX = randomNumber();
     }
+    // by init height=0
     if (posY >= height! - diameter - batHeight && vDir == Direction.down) {
       // check if the bat is here, otherwise loose
       if (posX >= (batPosition - diameter) &&
           posX <= (batPosition + batWidth + diameter)) {
         vDir = Direction.up;
         randY = randomNumber();
+        safeSetState(() => score++);
       } else {
         controller!.stop();
         dispose();
@@ -105,6 +110,7 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
     return LayoutBuilder(builder: (context, constraints) {
       height = constraints.maxHeight;
       width = constraints.maxWidth;
+      isBuilt = true; // added this
       batWidth = width! / 5;
       batHeight = height! / 20;
       return Stack(
@@ -122,6 +128,11 @@ class _PongState extends State<Pong> with SingleTickerProviderStateMixin {
                     moveBat(update),
                 child: Bat(batWidth, batHeight)),
           ),
+          Positioned(
+            top: 0,
+            right: 24,
+            child: Text('Score: ' + score.toString()),
+          )
         ],
       );
     });
